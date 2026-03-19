@@ -1,16 +1,15 @@
-/**
- * Servicio de autenticación preparado para integrar Firebase Auth o Supabase.
- *
- * Para conectar Firebase:
- *   1. npm install firebase
- *   2. Inicializar firebase app con tu config
- *   3. Usar getAuth(), signInWithPopup(), etc.
- *
- * Para conectar Supabase:
- *   1. npm install @supabase/supabase-js
- *   2. Crear cliente supabase con createClient(url, anonKey)
- *   3. Usar supabase.auth.signInWithOAuth(), etc.
- */
+import { ref } from "vue";
+import {
+  onAuthStateChanged as firebaseOnAuthStateChanged,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  type User as FirebaseUser,
+} from "firebase/auth";
+import { auth } from "../firebase/config";
 
 export interface User {
   id: string;
@@ -19,45 +18,52 @@ export interface User {
   photoURL?: string;
 }
 
-type AuthCallback = (user: User | null) => void;
-
-class AuthService {
-  private currentUser: User | null = null;
-  private listeners: AuthCallback[] = [];
-
-  getUser(): User | null {
-    return this.currentUser;
-  }
-
-  onAuthStateChanged(callback: AuthCallback): () => void {
-    this.listeners.push(callback);
-    callback(this.currentUser);
-    return () => {
-      this.listeners = this.listeners.filter((cb) => cb !== callback);
-    };
-  }
-
-  async signIn(): Promise<User> {
-    // Simulación — reemplazar con Firebase/Supabase
-    const user: User = {
-      id: "sim_user_001",
-      email: "demo@nexoai.com",
-      displayName: "Usuario Demo",
-    };
-
-    this.currentUser = user;
-    this.notifyListeners();
-    return user;
-  }
-
-  async signOut(): Promise<void> {
-    this.currentUser = null;
-    this.notifyListeners();
-  }
-
-  private notifyListeners() {
-    this.listeners.forEach((cb) => cb(this.currentUser));
-  }
+function mapFirebaseUser(fbUser: FirebaseUser): User {
+  return {
+    id: fbUser.uid,
+    email: fbUser.email ?? "",
+    displayName: fbUser.displayName ?? undefined,
+    photoURL: fbUser.photoURL ?? undefined,
+  };
 }
 
-export const authService = new AuthService();
+export const currentUser = ref<User | null>(null);
+export const authLoading = ref(true);
+
+firebaseOnAuthStateChanged(auth, (fbUser) => {
+  currentUser.value = fbUser ? mapFirebaseUser(fbUser) : null;
+  authLoading.value = false;
+});
+
+const googleProvider = new GoogleAuthProvider();
+const githubProvider = new GithubAuthProvider();
+
+export async function loginWithGoogle(): Promise<User> {
+  const result = await signInWithPopup(auth, googleProvider);
+  return mapFirebaseUser(result.user);
+}
+
+export async function loginWithGitHub(): Promise<User> {
+  const result = await signInWithPopup(auth, githubProvider);
+  return mapFirebaseUser(result.user);
+}
+
+export async function loginWithEmail(
+  email: string,
+  password: string
+): Promise<User> {
+  const result = await signInWithEmailAndPassword(auth, email, password);
+  return mapFirebaseUser(result.user);
+}
+
+export async function registerWithEmail(
+  email: string,
+  password: string
+): Promise<User> {
+  const result = await createUserWithEmailAndPassword(auth, email, password);
+  return mapFirebaseUser(result.user);
+}
+
+export async function logout(): Promise<void> {
+  await firebaseSignOut(auth);
+}

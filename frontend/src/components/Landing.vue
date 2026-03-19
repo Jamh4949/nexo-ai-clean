@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { createCheckout } from "../services/api";
-import { authService } from "../services/auth";
+import { currentUser, logout } from "../services/auth";
+import AuthModal from "./AuthModal.vue";
 
 const isAnnual = ref(false);
 const loading = ref(false);
 const email = ref("");
 const showEmailModal = ref(false);
+const showAuthModal = ref(false);
+const showUserMenu = ref(false);
 const selectedPlan = ref<"monthly" | "annual">("monthly");
-const user = ref(authService.getUser());
-
-authService.onAuthStateChanged((u) => {
-  user.value = u;
-});
 
 function openCheckout(plan: "monthly" | "annual") {
   selectedPlan.value = plan;
@@ -37,12 +35,9 @@ async function handleSubscribe() {
   }
 }
 
-async function handleAuth() {
-  if (user.value) {
-    await authService.signOut();
-  } else {
-    await authService.signIn();
-  }
+async function handleLogout() {
+  await logout();
+  showUserMenu.value = false;
 }
 
 const features = [
@@ -94,12 +89,64 @@ const features = [
           <a href="#pricing" class="transition hover:text-gray-900">Precios</a>
         </div>
 
+        <!-- Usuario NO logueado -->
         <button
-          @click="handleAuth"
+          v-if="!currentUser"
+          @click="showAuthModal = true"
           class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium transition hover:border-gray-300 hover:bg-gray-50"
         >
-          {{ user ? "Cerrar Sesión" : "Iniciar Sesión" }}
+          Iniciar Sesión
         </button>
+
+        <!-- Usuario logueado -->
+        <div v-else class="relative">
+          <button
+            @click="showUserMenu = !showUserMenu"
+            class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 transition hover:bg-gray-50"
+          >
+            <img
+              v-if="currentUser.photoURL"
+              :src="currentUser.photoURL"
+              :alt="currentUser.displayName || 'Avatar'"
+              class="h-7 w-7 rounded-full object-cover"
+              referrerpolicy="no-referrer"
+            />
+            <div
+              v-else
+              class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700"
+            >
+              {{ (currentUser.displayName || currentUser.email || "U").charAt(0).toUpperCase() }}
+            </div>
+            <span class="hidden max-w-[120px] truncate text-sm font-medium text-gray-700 md:block">
+              {{ currentUser.displayName || currentUser.email }}
+            </span>
+            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <!-- Dropdown -->
+          <div
+            v-if="showUserMenu"
+            class="absolute right-0 mt-2 w-56 rounded-xl border border-gray-100 bg-white py-2 shadow-xl"
+          >
+            <div class="border-b border-gray-100 px-4 pb-3 pt-1">
+              <p class="truncate text-sm font-medium text-gray-900">
+                {{ currentUser.displayName || "Usuario" }}
+              </p>
+              <p class="truncate text-xs text-gray-500">{{ currentUser.email }}</p>
+            </div>
+            <button
+              @click="handleLogout"
+              class="mt-1 flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
       </div>
     </nav>
 
@@ -380,6 +427,18 @@ const features = [
         <p>&copy; {{ new Date().getFullYear() }} NexoAI. Todos los derechos reservados.</p>
       </div>
     </footer>
+
+    <!-- Modal de Auth -->
+    <AuthModal v-if="showAuthModal" @close="showAuthModal = false" />
+
+    <!-- Click outside para cerrar el user menu -->
+    <Teleport to="body">
+      <div
+        v-if="showUserMenu"
+        class="fixed inset-0 z-40"
+        @click="showUserMenu = false"
+      ></div>
+    </Teleport>
 
     <!-- Modal de Email para Checkout -->
     <Teleport to="body">
