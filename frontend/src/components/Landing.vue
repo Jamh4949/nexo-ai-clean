@@ -42,28 +42,28 @@ async function handleLogout() {
 
 const features = [
   {
-    icon: "⚡",
-    title: "Generación instantánea",
+    icon: "🤖",
+    title: "Asistente IA 24/7",
     description:
-      "Crea posts, captions y threads en segundos con inteligencia artificial avanzada.",
+      "Atiende a tus clientes en automático, responde preguntas y cierra ventas incluso cuando estás durmiendo.",
   },
   {
-    icon: "🎯",
-    title: "Multi-plataforma",
+    icon: "📈",
+    title: "Automatización de Ventas",
     description:
-      "Contenido optimizado para Instagram, Twitter/X, LinkedIn, TikTok y más.",
+      "Crea embudos de venta inteligentes que nutren leads, envían seguimientos y convierten prospectos sin intervención manual.",
   },
   {
     icon: "📊",
-    title: "Tono personalizado",
+    title: "Análisis Inteligente",
     description:
-      "Ajusta el tono, estilo y formato según tu marca y audiencia objetivo.",
+      "Dashboards en tiempo real con métricas clave de tu negocio. Identifica oportunidades y toma decisiones basadas en datos.",
   },
   {
-    icon: "🔄",
-    title: "Calendario de contenido",
+    icon: "🔗",
+    title: "Integraciones Sin Límite",
     description:
-      "Planifica y programa tus publicaciones con un calendario visual integrado.",
+      "Conecta tu CRM, email marketing, pasarelas de pago y más de 50 herramientas en un solo lugar.",
   },
 ];
 </script>
@@ -85,7 +85,7 @@ const features = [
         </div>
 
         <div class="hidden items-center gap-8 text-sm font-medium text-gray-600 md:flex">
-          <a href="#features" class="transition hover:text-gray-900">Funciones</a>
+          <a href="#features" class="transition hover:text-gray-900">Soluciones</a>
           <a href="#pricing" class="transition hover:text-gray-900">Precios</a>
         </div>
 
@@ -165,24 +165,24 @@ const features = [
             ></span>
             <span class="relative inline-flex h-2 w-2 rounded-full bg-primary-500"></span>
           </span>
-          Potenciado por Inteligencia Artificial
+          Plataforma de Automatización con IA
         </div>
 
         <h1
           class="mb-6 text-4xl font-extrabold leading-tight tracking-tight text-gray-900 md:text-6xl"
         >
-          Genera contenido para
+          Automatiza tu negocio con
           <span
             class="bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent"
           >
-            redes sociales
+            inteligencia artificial
           </span>
-          en segundos
+          y vende mientras duermes
         </h1>
 
         <p class="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl">
-          NexoAI usa inteligencia artificial para crear posts, captions y estrategias
-          de contenido adaptadas a tu marca. Ahorra horas de trabajo cada semana.
+          NexoAI automatiza tus procesos, atiende a tus clientes 24/7 y cierra ventas
+          por ti. Ahorra horas de trabajo operativo y enfócate en lo que importa: crecer.
         </p>
 
         <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -190,7 +190,7 @@ const features = [
             href="#pricing"
             class="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary-600/25 transition hover:bg-primary-700 hover:shadow-primary-600/30"
           >
-            Comenzar gratis
+            Empezar ahora
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
@@ -204,7 +204,7 @@ const features = [
             href="#features"
             class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-8 py-3.5 text-base font-semibold text-gray-700 transition hover:bg-gray-50"
           >
-            Ver funciones
+            Ver soluciones
           </a>
         </div>
       </div>
@@ -215,11 +215,11 @@ const features = [
       <div class="mx-auto max-w-6xl px-6">
         <div class="mb-16 text-center">
           <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-            Todo lo que necesitas para crear contenido
+            Todo lo que necesitas para escalar tu negocio
           </h2>
           <p class="mx-auto max-w-2xl text-lg text-gray-600">
-            Herramientas diseñadas para creadores, marketers y equipos que quieren
-            escalar su presencia en redes sociales.
+            Herramientas de automatización diseñadas para empresarios, equipos de ventas
+            y negocios que quieren crecer sin aumentar su carga operativa.
           </p>
         </div>
 
@@ -246,10 +246,10 @@ const features = [
       <div class="mx-auto max-w-5xl px-6">
         <div class="mb-16 text-center">
           <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-            Planes simples y transparentes
+            Invierte en automatización, no en más horas de trabajo
           </h2>
           <p class="mx-auto mb-10 max-w-xl text-lg text-gray-600">
-            Elige el plan que mejor se adapte a tus necesidades. Sin sorpresas.
+            Planes diseñados para que tu negocio funcione en automático. Sin contratos, sin sorpresas.
           </p>
 
           <!-- Toggle Mensual / Anual -->
@@ -292,7 +292,7 @@ const features = [
             <div class="mb-6">
               <h3 class="text-lg font-semibold text-gray-900">Starter</h3>
               <p class="mt-1 text-sm text-gray-500">
-                Ideal para creadores independientes
+                Ideal para emprendedores y freelancers
               </p>
             </div>
 
@@ -306,9 +306,9 @@ const features = [
             <ul class="mb-8 space-y-3">
               <li
                 v-for="item in [
-                  '10 generaciones por mes',
-                  '2 redes sociales',
-                  'Plantillas básicas',
+                  '1 asistente IA activo',
+                  '100 interacciones/mes',
+                  'Automatizaciones básicas',
                   'Soporte por email',
                 ]"
                 :key="item"
@@ -351,7 +351,7 @@ const features = [
             <div class="mb-6">
               <h3 class="text-lg font-semibold text-gray-900">Pro</h3>
               <p class="mt-1 text-sm text-gray-500">
-                Para equipos y profesionales del marketing
+                Para negocios que quieren escalar en automático
               </p>
             </div>
 
@@ -372,12 +372,12 @@ const features = [
             <ul class="mb-8 space-y-3">
               <li
                 v-for="item in [
-                  'Generaciones ilimitadas',
-                  'Todas las redes sociales',
-                  'Calendario de contenido',
-                  'Tonos y estilos personalizados',
-                  'Análisis de rendimiento',
-                  'Soporte prioritario',
+                  'Asistentes IA ilimitados',
+                  'Interacciones sin límite',
+                  'Embudos de venta automáticos',
+                  'Integraciones premium (CRM, email, pagos)',
+                  'Análisis y reportes en tiempo real',
+                  'Soporte prioritario 24/7',
                 ]"
                 :key="item"
                 class="flex items-center gap-3 text-sm text-gray-600"
@@ -448,7 +448,7 @@ const features = [
         @click.self="showEmailModal = false"
       >
         <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
-          <h3 class="mb-2 text-xl font-bold">Suscribirse al plan Pro</h3>
+          <h3 class="mb-2 text-xl font-bold">Activar NexoAI Pro</h3>
           <p class="mb-6 text-sm text-gray-500">
             {{
               selectedPlan === "annual"
