@@ -40,6 +40,12 @@ async function fetchToken() {
 }
 
 function handleMessage(event: MessageEvent) {
+  // 🛡️ REGLA DE SEGURIDAD: Solo aceptar mensajes que vengan de Truora
+  if (event.origin !== "https://identity.truora.com") {
+    return; // Ignorar mensajes de otras fuentes (extensiones, hackers, etc.)
+  }
+
+  // Si pasamos el filtro de seguridad, procesamos el mensaje:
   if (event.data === "truora.process.succeeded") {
     console.log("¡Flujo completado con éxito!");
     flowStatus.value = "success";
