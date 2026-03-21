@@ -18,6 +18,11 @@ const router = createRouter({
       name: "cancel",
       component: () => import("../components/Cancel.vue"),
     },
+    {
+      path: "/verify",
+      name: "verify",
+      component: () => import("../components/TruoraFlow.vue"),
+    },
   ],
   scrollBehavior(_to, _from, savedPosition) {
     return savedPosition || { top: 0 };
