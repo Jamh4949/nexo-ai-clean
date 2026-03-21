@@ -85,19 +85,27 @@ func (s *TruoraService) GenerateWebToken(req TruoraTokenRequest) (*TruoraTokenRe
 		return nil, fmt.Errorf("error parseando respuesta de Truora: %w", err)
 	}
 
+	// 1. Extraemos el ID del proceso (sabemos que viene según tus logs)
+	processID, _ := result["process_id"].(string)
+
+	// 2. Intentamos buscar la URL en los campos conocidos
 	processURL, _ := result["web_url"].(string)
 	if processURL == "" {
 		processURL, _ = result["process_url"].(string)
 	}
 
-	processID, _ := result["process_id"].(string)
-
-	if processURL == "" {
-		log.Printf("[Truora] Respuesta sin URL de proceso: %s", string(body))
-		return nil, fmt.Errorf("Truora no devolvió una URL de proceso válida")
+	// 3. ¡EL FIX!: Si no viene URL pero tenemos ID, fabricamos la URL del iFrame manualmente
+	if processURL == "" && processID != "" {
+		processURL = fmt.Sprintf("https://identity.truora.com/?token=%s", processID)
 	}
 
-	log.Printf("[Truora] Proceso creado: %s (account: %s)", processID, accountID)
+	// 4. Validación final de seguridad
+	if processURL == "" {
+		log.Printf("[Truora] Fallo total al obtener URL. Body: %s", string(body))
+		return nil, fmt.Errorf("Truora no devolvió una URL ni un ID válido para generar el acceso")
+	}
+
+	log.Printf("[Truora] ÉXITO: URL generada para ID: %s", processID)
 
 	return &TruoraTokenResponse{
 		Success:    true,
