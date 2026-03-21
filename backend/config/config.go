@@ -17,6 +17,8 @@ type Config struct {
 	CancelURL        string
 	ResendAPIKey     string
 	HubSpotAPIKey    string
+	TruoraAPIKey     string
+	TruoraFlowID     string
 	AllowedOrigins   string
 	FrameAncestors   string
 }
@@ -36,6 +38,8 @@ func Load() *Config {
 		CancelURL:        getEnv("CANCEL_URL", "http://localhost:5173/cancel"),
 		ResendAPIKey:     getEnv("RESEND_API_KEY", ""),
 		HubSpotAPIKey:    getEnv("HUBSPOT_API_KEY", ""),
+		TruoraAPIKey:     getEnv("TRUORA_API_KEY", ""),
+		TruoraFlowID:     getEnv("TRUORA_FLOW_ID", ""),
 		AllowedOrigins:   getEnv("ALLOWED_ORIGINS", "*"),
 		FrameAncestors:   getEnv("FRAME_ANCESTORS", "*"),
 	}

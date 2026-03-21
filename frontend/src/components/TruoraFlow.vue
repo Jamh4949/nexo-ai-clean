@@ -1,12 +1,43 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { currentUser } from "../services/auth";
 
 const router = useRouter();
-const flowStatus = ref<"pending" | "success" | "failed">("pending");
+const flowStatus = ref<"loading" | "pending" | "success" | "failed" | "error">("loading");
+const truoraURL = ref("");
+const errorMsg = ref("");
 
-const TRUORA_URL =
-"https://identity.truora.com?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoiIiwiYWRkaXRpb25hbF9kYXRhIjoie1wiY291bnRyeVwiOlwiQUxMXCIsXCJmbG93X2lkXCI6XCJJUEY4YjM1ODlkMTQ3MWEzMDcxNTNhNjA4ODExN2QxNGZkMVwiLFwicmVkaXJlY3RfdXJsXCI6XCJodHRwczovL2V4YW1wbGUuY29tXCIsXCJwcm9jZXNzX2lkXCI6XCJJRFAxYjA4MzJkMzhmZWY5ZjAxMmI2ZmI1MTk2ZTFhMTgwZFwifSIsImFwcGxpY2F0aW9uX2lkIjoiIiwiY2xpZW50X2lkIjoiVENJNjY5NmRkMDdhMTczZmM2ZGQzOGVmMDQ2OTJkMjg1YmUiLCJleHAiOjE3NzQxMjE4NTgsImdyYW50IjoiZGlnaXRhbC1pZGVudGl0eSIsImlhdCI6MTc3NDEyMDk1OCwiaXNzIjoiaHR0cHM6Ly9jb2duaXRvLWlkcC51cy1lYXN0LTEuYW1hem9uYXdzLmNvbS91cy1lYXN0LTFfUmJvQ2lFd01nIiwianRpIjoiZWMwMmIyMDktYjkwMC00NDhmLTk4NzAtOTQ5YjhlMGE3NmIyIiwia2V5X25hbWUiOiJrZXlfbmFtZV8xNzc0MTIwOTU3NTk5Iiwia2V5X3R5cGUiOiJ0ZXN0IiwidXNlcm5hbWUiOiJUQ0k2Njk2ZGQwN2ExNzNmYzZkZDM4ZWYwNDY5MmQyODViZS1rZXlfbmFtZV8xNzc0MTIwOTU3NTk5In0.h8oGJ4mRSBdSD9ZsiRTezUVkfZJUlgdV7ZozGFlo0Ns";
+async function fetchToken() {
+  flowStatus.value = "loading";
+  errorMsg.value = "";
+
+  try {
+    const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+    const body: Record<string, string> = {};
+    if (currentUser.value?.id) {
+      body.account_id = currentUser.value.id;
+    }
+
+    const res = await fetch(`${backendURL}/api/truora/generate-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Error al generar token de verificación");
+    }
+
+    truoraURL.value = data.process_url;
+    flowStatus.value = "pending";
+  } catch (e: any) {
+    errorMsg.value = e.message || "No se pudo conectar con el servidor";
+    flowStatus.value = "error";
+  }
+}
 
 function handleMessage(event: MessageEvent) {
   if (event.data === "truora.process.succeeded") {
@@ -20,6 +51,7 @@ function handleMessage(event: MessageEvent) {
 
 onMounted(() => {
   window.addEventListener("message", handleMessage);
+  fetchToken();
 });
 
 onUnmounted(() => {
@@ -29,8 +61,42 @@ onUnmounted(() => {
 
 <template>
   <div class="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4 py-10">
-    <!-- Estado: Pendiente (mostrando iFrame) -->
-    <template v-if="flowStatus === 'pending'">
+    <!-- Estado: Cargando token -->
+    <div v-if="flowStatus === 'loading'" class="text-center">
+      <svg class="mx-auto mb-4 h-10 w-10 animate-spin text-primary-600" viewBox="0 0 24 24" fill="none">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <p class="text-sm text-gray-500">Preparando verificación...</p>
+    </div>
+
+    <!-- Estado: Error al cargar token -->
+    <div v-else-if="flowStatus === 'error'" class="w-full max-w-md text-center">
+      <div class="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-red-100">
+        <svg class="h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 4h.01M5.07 19h13.86a2 2 0 001.74-2.97L13.74 4.03a2 2 0 00-3.48 0L3.33 16.03A2 2 0 005.07 19z" />
+        </svg>
+      </div>
+      <h1 class="mb-3 text-3xl font-bold tracking-tight text-gray-900">Error de conexión</h1>
+      <p class="mb-10 text-lg text-gray-600">{{ errorMsg }}</p>
+      <div class="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <button
+          @click="fetchToken"
+          class="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary-600/25 transition hover:bg-primary-700"
+        >
+          Reintentar
+        </button>
+        <button
+          @click="router.push('/')"
+          class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-8 py-3.5 text-base font-semibold text-gray-700 transition hover:bg-gray-100"
+        >
+          Volver al inicio
+        </button>
+      </div>
+    </div>
+
+    <!-- Estado: iFrame de Truora -->
+    <template v-else-if="flowStatus === 'pending'">
       <div class="mb-6 text-center">
         <div class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold text-white">
           N
@@ -41,7 +107,7 @@ onUnmounted(() => {
 
       <div class="w-full max-w-[470px]">
         <iframe
-          :src="TRUORA_URL"
+          :src="truoraURL"
           allow="camera"
           class="mx-auto block w-full rounded-xl shadow-lg"
           style="height: 700px; max-height: 80vh; border: none"
@@ -85,7 +151,7 @@ onUnmounted(() => {
       </p>
       <div class="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <button
-          @click="flowStatus = 'pending'"
+          @click="fetchToken"
           class="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary-600/25 transition hover:bg-primary-700"
         >
           Reintentar

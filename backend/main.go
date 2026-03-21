@@ -24,9 +24,12 @@ func main() {
 	emailService := services.NewEmailService(cfg)
 	crmService := services.NewCRMService(cfg)
 
-	checkoutHandler := handlers.NewCheckoutHandler(stripeService, emailService, crmService)
+	truoraService := services.NewTruoraService(cfg)
 
-	routes.Setup(r, checkoutHandler)
+	checkoutHandler := handlers.NewCheckoutHandler(stripeService, emailService, crmService)
+	truoraHandler := handlers.NewTruoraHandler(truoraService)
+
+	routes.Setup(r, checkoutHandler, truoraHandler)
 
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	log.Printf("NexoAI API corriendo en %s", addr)
