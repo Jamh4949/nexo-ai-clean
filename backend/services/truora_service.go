@@ -54,6 +54,7 @@ func (s *TruoraService) GenerateWebToken(req TruoraTokenRequest) (*TruoraTokenRe
 	form.Set("type", "web")
 	form.Set("flow_id", s.flowID)
 	form.Set("account_id", accountID)
+	form.Set("country", "ALL")
 
 	httpReq, err := http.NewRequest("POST", truoraProcessesURL, strings.NewReader(form.Encode()))
 	if err != nil {
