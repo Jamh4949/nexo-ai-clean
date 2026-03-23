@@ -13,17 +13,23 @@ import (
 	"github.com/nexoai/backend/config"
 )
 
-const truoraProcessesURL = "https://api.identity.truora.com/v1/processes"
+// Endpoint correcto para generar Web Integration Tokens (JWT de 2h)
+// Documentación: https://dev.truora.com/guides/web_integration_token/
+const truoraTokenURL = "https://api.account.truora.com/v1/api-keys"
+
+const truoraIframeBaseURL = "https://identity.truora.com/"
 
 type TruoraService struct {
-	apiKey string
-	flowID string
+	apiKey      string
+	flowID      string
+	redirectURL string
 }
 
 func NewTruoraService(cfg *config.Config) *TruoraService {
 	return &TruoraService{
-		apiKey: cfg.TruoraAPIKey,
-		flowID: cfg.TruoraFlowID,
+		apiKey:      cfg.TruoraAPIKey,
+		flowID:      cfg.TruoraFlowID,
+		redirectURL: cfg.TruoraRedirectURL,
 	}
 }
 
@@ -34,7 +40,6 @@ type TruoraTokenRequest struct {
 type TruoraTokenResponse struct {
 	Success    bool   `json:"success"`
 	ProcessURL string `json:"process_url"`
-	ProcessID  string `json:"process_id"`
 }
 
 func (s *TruoraService) GenerateWebToken(req TruoraTokenRequest) (*TruoraTokenResponse, error) {
@@ -51,12 +56,15 @@ func (s *TruoraService) GenerateWebToken(req TruoraTokenRequest) (*TruoraTokenRe
 	}
 
 	form := url.Values{}
-	form.Set("type", "web")
+	form.Set("key_type", "web")
+	form.Set("grant", "digital-identity")
+	form.Set("api_key_version", "1")
+	form.Set("country", "ALL")
 	form.Set("flow_id", s.flowID)
 	form.Set("account_id", accountID)
-	form.Set("country", "ALL")
+	form.Set("redirect_url", s.redirectURL)
 
-	httpReq, err := http.NewRequest("POST", truoraProcessesURL, strings.NewReader(form.Encode()))
+	httpReq, err := http.NewRequest("POST", truoraTokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("error creando request de Truora: %w", err)
 	}
@@ -80,36 +88,26 @@ func (s *TruoraService) GenerateWebToken(req TruoraTokenRequest) (*TruoraTokenRe
 		return nil, fmt.Errorf("Truora respondió con status %d", resp.StatusCode)
 	}
 
-	var result map[string]interface{}
+	var result struct {
+		APIKey  string `json:"api_key"`
+		Message string `json:"message"`
+	}
 	if err := json.Unmarshal(body, &result); err != nil {
+		log.Printf("[Truora] Respuesta no parseable: %s", string(body))
 		return nil, fmt.Errorf("error parseando respuesta de Truora: %w", err)
 	}
 
-	// 1. Extraemos el ID del proceso (sabemos que viene según tus logs)
-	processID, _ := result["process_id"].(string)
-
-	// 2. Intentamos buscar la URL en los campos conocidos
-	processURL, _ := result["web_url"].(string)
-	if processURL == "" {
-		processURL, _ = result["process_url"].(string)
+	if result.APIKey == "" {
+		log.Printf("[Truora] Respuesta sin api_key: %s", string(body))
+		return nil, fmt.Errorf("Truora no devolvió un token válido")
 	}
 
-	// 3. ¡EL FIX!: Si no viene URL pero tenemos ID, fabricamos la URL del iFrame manualmente
-	if processURL == "" && processID != "" {
-		processURL = fmt.Sprintf("https://identity.truora.com/?token=%s", processID)
-	}
+	processURL := fmt.Sprintf("%s?token=%s", truoraIframeBaseURL, result.APIKey)
 
-	// 4. Validación final de seguridad
-	if processURL == "" {
-		log.Printf("[Truora] Fallo total al obtener URL. Body: %s", string(body))
-		return nil, fmt.Errorf("Truora no devolvió una URL ni un ID válido para generar el acceso")
-	}
-
-	log.Printf("[Truora] ÉXITO: URL generada para ID: %s", processID)
+	log.Printf("[Truora] Web Integration Token generado para account: %s", accountID)
 
 	return &TruoraTokenResponse{
 		Success:    true,
 		ProcessURL: processURL,
-		ProcessID:  processID,
 	}, nil
 }
