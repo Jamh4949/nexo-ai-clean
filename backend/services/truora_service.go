@@ -20,14 +20,16 @@ const truoraTokenURL = "https://api.account.truora.com/v1/api-keys"
 const truoraIframeBaseURL = "https://identity.truora.com/"
 
 type TruoraService struct {
-	apiKey string
-	flowID string
+	apiKey      string
+	flowID      string
+	redirectURL string
 }
 
 func NewTruoraService(cfg *config.Config) *TruoraService {
 	return &TruoraService{
-		apiKey: cfg.TruoraAPIKey,
-		flowID: cfg.TruoraFlowID,
+		apiKey:      cfg.TruoraAPIKey,
+		flowID:      cfg.TruoraFlowID,
+		redirectURL: cfg.TruoraRedirectURL,
 	}
 }
 
@@ -60,6 +62,7 @@ func (s *TruoraService) GenerateWebToken(req TruoraTokenRequest) (*TruoraTokenRe
 	form.Set("country", "ALL")
 	form.Set("flow_id", s.flowID)
 	form.Set("account_id", accountID)
+	form.Set("redirect_url", s.redirectURL)
 
 	httpReq, err := http.NewRequest("POST", truoraTokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
