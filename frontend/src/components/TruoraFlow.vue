@@ -4,6 +4,9 @@ import { useRouter, useRoute } from "vue-router";
 import { currentUser } from "../services/auth";
 import { createCheckout } from "../services/api";
 
+const STORAGE_PLAN_KEY = "nexoai_selected_plan";
+const STORAGE_EMAIL_KEY = "nexoai_user_email";
+
 const router = useRouter();
 const route = useRoute();
 
@@ -12,13 +15,56 @@ const truoraURL = ref("");
 const errorMsg = ref("");
 const redirectingToPayment = ref(false);
 
+const isInsideIframe = window.self !== window.top;
+
 const selectedPlan = computed<"monthly" | "annual">(() => {
-  return route.query.plan === "annual" ? "annual" : "monthly";
+  if (route.query.plan === "annual" || route.query.plan === "monthly") {
+    return route.query.plan;
+  }
+  return (localStorage.getItem(STORAGE_PLAN_KEY) as "monthly" | "annual") || "monthly";
 });
 
 const planLabel = computed(() => {
   return selectedPlan.value === "annual" ? "$150/año" : "$15/mes";
 });
+
+function persistContext() {
+  localStorage.setItem(STORAGE_PLAN_KEY, selectedPlan.value);
+  const email = currentUser.value?.email;
+  if (email) {
+    localStorage.setItem(STORAGE_EMAIL_KEY, email);
+  }
+}
+
+async function redirectToStripe() {
+  redirectingToPayment.value = true;
+
+  const email =
+    currentUser.value?.email || localStorage.getItem(STORAGE_EMAIL_KEY) || "";
+
+  if (!email) {
+    flowStatus.value = "success";
+    redirectingToPayment.value = false;
+    return;
+  }
+
+  try {
+    const session = await createCheckout({
+      plan: selectedPlan.value,
+      email,
+    });
+
+    if (isInsideIframe && window.top) {
+      window.top.location.href = session.checkout_url;
+    } else {
+      window.location.href = session.checkout_url;
+    }
+  } catch (e: any) {
+    errorMsg.value = e.message || "Error al crear sesión de pago";
+    flowStatus.value = "error";
+    redirectingToPayment.value = false;
+  }
+}
 
 async function fetchToken() {
   flowStatus.value = "loading";
@@ -51,36 +97,13 @@ async function fetchToken() {
   }
 }
 
-async function redirectToStripe() {
-  redirectingToPayment.value = true;
-
-  const email = currentUser.value?.email || "";
-  if (!email) {
-    flowStatus.value = "success";
-    redirectingToPayment.value = false;
-    return;
-  }
-
-  try {
-    const session = await createCheckout({
-      plan: selectedPlan.value,
-      email,
-    });
-    window.location.href = session.checkout_url;
-  } catch (e: any) {
-    errorMsg.value = e.message || "Error al crear sesión de pago";
-    flowStatus.value = "error";
-    redirectingToPayment.value = false;
-  }
-}
-
 function handleMessage(event: MessageEvent) {
   if (event.origin !== "https://identity.truora.com") {
     return;
   }
 
   if (event.data === "truora.process.succeeded") {
-    console.log("Verificación exitosa — redirigiendo a Stripe Checkout");
+    console.log("Verificación exitosa (postMessage) — redirigiendo a Stripe");
     flowStatus.value = "success";
     redirectToStripe();
   } else if (event.data === "truora.process.failed") {
@@ -90,6 +113,15 @@ function handleMessage(event: MessageEvent) {
 }
 
 onMounted(() => {
+  persistContext();
+
+  if (route.query.process_id) {
+    console.log("[TruoraFlow] Redirect detectado — process_id:", route.query.process_id);
+    flowStatus.value = "success";
+    redirectToStripe();
+    return;
+  }
+
   window.addEventListener("message", handleMessage);
   fetchToken();
 });
