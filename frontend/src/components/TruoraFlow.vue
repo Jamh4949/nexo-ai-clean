@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, onUnmounted, ref, computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { currentUser } from "../services/auth";
+import { createCheckout } from "../services/api";
 
 const router = useRouter();
+const route = useRoute();
+
 const flowStatus = ref<"loading" | "pending" | "success" | "failed" | "error">("loading");
 const truoraURL = ref("");
 const errorMsg = ref("");
+const redirectingToPayment = ref(false);
+
+const selectedPlan = computed<"monthly" | "annual">(() => {
+  return route.query.plan === "annual" ? "annual" : "monthly";
+});
+
+const planLabel = computed(() => {
+  return selectedPlan.value === "annual" ? "$150/año" : "$15/mes";
+});
 
 async function fetchToken() {
   flowStatus.value = "loading";
@@ -39,18 +51,40 @@ async function fetchToken() {
   }
 }
 
-function handleMessage(event: MessageEvent) {
-  // 🛡️ REGLA DE SEGURIDAD: Solo aceptar mensajes que vengan de Truora
-  if (event.origin !== "https://identity.truora.com") {
-    return; // Ignorar mensajes de otras fuentes (extensiones, hackers, etc.)
+async function redirectToStripe() {
+  redirectingToPayment.value = true;
+
+  const email = currentUser.value?.email || "";
+  if (!email) {
+    flowStatus.value = "success";
+    redirectingToPayment.value = false;
+    return;
   }
 
-  // Si pasamos el filtro de seguridad, procesamos el mensaje:
+  try {
+    const session = await createCheckout({
+      plan: selectedPlan.value,
+      email,
+    });
+    window.location.href = session.checkout_url;
+  } catch (e: any) {
+    errorMsg.value = e.message || "Error al crear sesión de pago";
+    flowStatus.value = "error";
+    redirectingToPayment.value = false;
+  }
+}
+
+function handleMessage(event: MessageEvent) {
+  if (event.origin !== "https://identity.truora.com") {
+    return;
+  }
+
   if (event.data === "truora.process.succeeded") {
-    console.log("¡Flujo completado con éxito!");
+    console.log("Verificación exitosa — redirigiendo a Stripe Checkout");
     flowStatus.value = "success";
+    redirectToStripe();
   } else if (event.data === "truora.process.failed") {
-    console.log("El flujo falló");
+    console.log("El flujo de verificación falló");
     flowStatus.value = "failed";
   }
 }
@@ -76,7 +110,7 @@ onUnmounted(() => {
       <p class="text-sm text-gray-500">Preparando verificación...</p>
     </div>
 
-    <!-- Estado: Error al cargar token -->
+    <!-- Estado: Error -->
     <div v-else-if="flowStatus === 'error'" class="w-full max-w-md text-center">
       <div class="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-red-100">
         <svg class="h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -108,7 +142,9 @@ onUnmounted(() => {
           N
         </div>
         <h1 class="text-2xl font-bold tracking-tight text-gray-900">Verificación de identidad</h1>
-        <p class="mt-2 text-sm text-gray-500">Completa el proceso para activar tu cuenta</p>
+        <p class="mt-2 text-sm text-gray-500">
+          Completa el proceso para continuar con tu plan {{ planLabel }}
+        </p>
       </div>
 
       <div class="w-full max-w-[470px]">
@@ -121,20 +157,33 @@ onUnmounted(() => {
       </div>
     </template>
 
-    <!-- Estado: Éxito -->
+    <!-- Estado: Éxito — redirigiendo a Stripe -->
     <div v-else-if="flowStatus === 'success'" class="w-full max-w-md text-center">
       <div class="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-green-100">
-        <svg class="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <svg
+          v-if="redirectingToPayment"
+          class="h-10 w-10 animate-spin text-green-500"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <svg v-else class="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </div>
       <h1 class="mb-3 text-3xl font-bold tracking-tight text-gray-900">
         Verificación completada
       </h1>
-      <p class="mb-10 text-lg text-gray-600">
-        Tu identidad fue verificada exitosamente. Tu suscripción está activa.
+      <p v-if="redirectingToPayment" class="mb-10 text-lg text-gray-600">
+        Redirigiendo al pago de tu plan {{ planLabel }}...
+      </p>
+      <p v-else class="mb-10 text-lg text-gray-600">
+        Tu identidad fue verificada exitosamente.
       </p>
       <button
+        v-if="!redirectingToPayment"
         @click="router.push('/')"
         class="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary-600/25 transition hover:bg-primary-700"
       >

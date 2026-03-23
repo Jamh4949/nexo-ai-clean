@@ -209,7 +209,7 @@ const features = [
         </div>
 
         <router-link
-          to="/verify"
+          :to="{ path: '/verify', query: { plan: isAnnual ? 'annual' : 'monthly' } }"
           class="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-accent-500 to-primary-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-accent-500/25 transition hover:shadow-accent-500/40 hover:brightness-110"
         >
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
