@@ -1,38 +1,18 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { createCheckout } from "../services/api";
+import { useRouter } from "vue-router";
 import { currentUser, logout } from "../services/auth";
 import AuthModal from "./AuthModal.vue";
 
+const router = useRouter();
+
 const isAnnual = ref(false);
-const loading = ref(false);
-const email = ref("");
-const showEmailModal = ref(false);
 const showAuthModal = ref(false);
 const showUserMenu = ref(false);
-const selectedPlan = ref<"monthly" | "annual">("monthly");
 
-function openCheckout(plan: "monthly" | "annual") {
-  selectedPlan.value = plan;
-  showEmailModal.value = true;
-}
-
-async function handleSubscribe() {
-  if (!email.value) return;
-  loading.value = true;
-  try {
-    const res = await createCheckout({
-      plan: selectedPlan.value,
-      email: email.value,
-    });
-    window.open(res.checkout_url, "_blank");
-  } catch (e: any) {
-    alert(e.message || "Error al procesar el pago");
-  } finally {
-    loading.value = false;
-    showEmailModal.value = false;
-    email.value = "";
-  }
+function goToVerify() {
+  const plan = isAnnual.value ? "annual" : "monthly";
+  router.push({ path: "/verify", query: { plan } });
 }
 
 async function handleLogout() {
@@ -208,15 +188,15 @@ const features = [
           </a>
         </div>
 
-        <router-link
-          :to="{ path: '/verify', query: { plan: isAnnual ? 'annual' : 'monthly' } }"
+        <button
+          @click="goToVerify"
           class="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-accent-500 to-primary-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-accent-500/25 transition hover:shadow-accent-500/40 hover:brightness-110"
         >
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
           Verificar Identidad y Pagar
-        </router-link>
+        </button>
       </div>
     </section>
 
@@ -410,11 +390,10 @@ const features = [
             </ul>
 
             <button
-              @click="openCheckout(isAnnual ? 'annual' : 'monthly')"
-              :disabled="loading"
-              class="w-full rounded-xl bg-primary-600 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-600/25 transition hover:bg-primary-700 disabled:opacity-60"
+              @click="goToVerify"
+              class="w-full rounded-xl bg-primary-600 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-600/25 transition hover:bg-primary-700"
             >
-              {{ loading ? "Procesando..." : "Suscribirse" }}
+              Suscribirse
             </button>
           </div>
         </div>
@@ -450,53 +429,5 @@ const features = [
       ></div>
     </Teleport>
 
-    <!-- Modal de Email para Checkout -->
-    <Teleport to="body">
-      <div
-        v-if="showEmailModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        @click.self="showEmailModal = false"
-      >
-        <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
-          <h3 class="mb-2 text-xl font-bold">Activar NexoAI Pro</h3>
-          <p class="mb-6 text-sm text-gray-500">
-            {{
-              selectedPlan === "annual"
-                ? "$150/año ($12.5/mes)"
-                : "$15/mes"
-            }}
-          </p>
-
-          <form @submit.prevent="handleSubscribe">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700">
-              Tu correo electrónico
-            </label>
-            <input
-              v-model="email"
-              type="email"
-              required
-              placeholder="tu@email.com"
-              class="mb-6 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
-            />
-            <div class="flex gap-3">
-              <button
-                type="button"
-                @click="showEmailModal = false"
-                class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium transition hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                :disabled="loading"
-                class="flex-1 rounded-lg bg-primary-600 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:opacity-60"
-              >
-                {{ loading ? "Procesando..." : "Continuar al pago" }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>

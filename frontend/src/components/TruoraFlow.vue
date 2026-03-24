@@ -17,18 +17,26 @@ const redirectingToPayment = ref(false);
 
 const isInsideIframe = window.self !== window.top;
 
-const selectedPlan = computed<"monthly" | "annual">(() => {
-  if (route.query.plan === "annual" || route.query.plan === "monthly") {
-    return route.query.plan;
+function getSavedPlan(): "monthly" | "annual" {
+  const fromQuery = route.query.plan;
+  if (fromQuery === "annual" || fromQuery === "monthly") {
+    return fromQuery;
   }
-  return (localStorage.getItem(STORAGE_PLAN_KEY) as "monthly" | "annual") || "monthly";
-});
+  const fromStorage = localStorage.getItem(STORAGE_PLAN_KEY);
+  if (fromStorage === "annual" || fromStorage === "monthly") {
+    return fromStorage;
+  }
+  return "monthly";
+}
+
+const selectedPlan = ref<"monthly" | "annual">(getSavedPlan());
 
 const planLabel = computed(() => {
   return selectedPlan.value === "annual" ? "$150/año" : "$15/mes";
 });
 
 function persistContext() {
+  console.log("[TruoraFlow] Guardando plan en localStorage:", selectedPlan.value);
   localStorage.setItem(STORAGE_PLAN_KEY, selectedPlan.value);
   const email = currentUser.value?.email;
   if (email) {
@@ -37,16 +45,17 @@ function persistContext() {
 }
 
 async function redirectToStripe() {
+  const plan = selectedPlan.value;
+  console.log("[TruoraFlow] redirectToStripe — plan:", plan);
   redirectingToPayment.value = true;
 
   const email =
     currentUser.value?.email || localStorage.getItem(STORAGE_EMAIL_KEY) || "";
 
   try {
-    const session = await createCheckout({
-      plan: selectedPlan.value,
-      email,
-    });
+    console.log("[TruoraFlow] Llamando createCheckout con:", { plan, email });
+    const session = await createCheckout({ plan, email });
+    console.log("[TruoraFlow] Stripe checkout_url recibido:", session.checkout_url);
 
     if (isInsideIframe && window.top) {
       window.top.location.href = session.checkout_url;
@@ -54,6 +63,7 @@ async function redirectToStripe() {
       window.location.href = session.checkout_url;
     }
   } catch (e: any) {
+    console.error("[TruoraFlow] Error en redirectToStripe:", e);
     errorMsg.value = e.message || "Error al crear sesión de pago";
     flowStatus.value = "error";
     redirectingToPayment.value = false;
@@ -97,20 +107,24 @@ function handleMessage(event: MessageEvent) {
   }
 
   if (event.data === "truora.process.succeeded") {
-    console.log("Verificación exitosa (postMessage) — redirigiendo a Stripe");
+    console.log("[TruoraFlow] postMessage: truora.process.succeeded — plan:", selectedPlan.value);
     flowStatus.value = "success";
     redirectToStripe();
   } else if (event.data === "truora.process.failed") {
-    console.log("El flujo de verificación falló");
+    console.log("[TruoraFlow] postMessage: truora.process.failed");
     flowStatus.value = "failed";
   }
 }
 
 onMounted(() => {
+  console.log("[TruoraFlow] Montado — query.plan:", route.query.plan, "| isIframe:", isInsideIframe);
+  console.log("[TruoraFlow] Plan resuelto:", selectedPlan.value);
+
   persistContext();
 
   if (route.query.process_id) {
-    console.log("[TruoraFlow] Redirect detectado — process_id:", route.query.process_id);
+    console.log("[TruoraFlow] Redirect de Truora detectado — process_id:", route.query.process_id);
+    console.log("[TruoraFlow] Plan desde localStorage:", localStorage.getItem(STORAGE_PLAN_KEY));
     flowStatus.value = "success";
     redirectToStripe();
     return;
