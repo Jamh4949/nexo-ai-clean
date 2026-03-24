@@ -42,12 +42,6 @@ async function redirectToStripe() {
   const email =
     currentUser.value?.email || localStorage.getItem(STORAGE_EMAIL_KEY) || "";
 
-  if (!email) {
-    flowStatus.value = "success";
-    redirectingToPayment.value = false;
-    return;
-  }
-
   try {
     const session = await createCheckout({
       plan: selectedPlan.value,

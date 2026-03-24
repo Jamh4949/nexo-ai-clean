@@ -28,8 +28,8 @@ func (h *CheckoutHandler) CreateCheckout(c *gin.Context) {
 		return
 	}
 
-	if req.Email == "" || req.Plan == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "email y plan son requeridos"})
+	if req.Plan == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "plan es requerido"})
 		return
 	}
 

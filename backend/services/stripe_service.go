@@ -50,11 +50,14 @@ func (s *StripeService) CreateCheckoutSession(req CheckoutRequest) (*CheckoutRes
 	lineItem := s.buildLineItem(req.Plan)
 
 	params := &stripe.CheckoutSessionParams{
-		Mode:          stripe.String(string(stripe.CheckoutSessionModeSubscription)),
-		CustomerEmail: stripe.String(req.Email),
-		SuccessURL:    stripe.String(s.successURL + "?session_id={CHECKOUT_SESSION_ID}"),
-		CancelURL:     stripe.String(s.cancelURL),
-		LineItems:     []*stripe.CheckoutSessionLineItemParams{lineItem},
+		Mode:       stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		SuccessURL: stripe.String(s.successURL + "?session_id={CHECKOUT_SESSION_ID}"),
+		CancelURL:  stripe.String(s.cancelURL),
+		LineItems:  []*stripe.CheckoutSessionLineItemParams{lineItem},
+	}
+
+	if req.Email != "" {
+		params.CustomerEmail = stripe.String(req.Email)
 	}
 
 	sess, err := session.New(params)
